@@ -67,7 +67,7 @@ alert_active = Fals
 alert_duration = 36 #secs
 alert_remaining = 0 #remaining secs
 
-focus_text = "...locking in..." + chr(0) + "...focusing..." + chr(1) + "...work in progress..." chr(2) + "...dnd on!..." + chr(3)
+focus_text = "...locking in..." + chr(0) + "...focusing..." + chr(1) + "...work in progress..." + chr(2) + "...dnd on!..." + chr(3)
 break_text = " time for a recharge! go drink water and get some fresh air " + chr(3)
 alert_text = "you've got this!!"
 
