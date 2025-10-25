@@ -54,10 +54,20 @@ lcd.create_char(1, star)
 
 num_cols = 16
 
-scroll_text = "...locking in..." + chr(0) + "..." + chr(1) + "..." + "focusing..." + chr(2) + "..." + chr(3)  
+current_mode = "focus"
+modes = {
+    "focus": {"active": True, "duration": 25},  # 25 minutes
+    "break": {"active": False, "duration": 5},  # 5 minutes
+    "alert": {"active": False, "duration": 12},    # e.g., short alert
+}
+
+focus_text = "...locking in..." + chr(0) + "...focusing..." + chr(1) + "...work in progress..." chr(2) + "...dnd on!..." + chr(3)
+break_text = " time for a recharge! go drink water and get some fresh air " + chr(3)
+alert_text = "you've got this!!"
 
 # Convert string to list of characters for scrolling
-scroll_chars = list(scroll_text)
+focus_chars = list(focus_text)
+break_chars = list(break_text)
 
 # === Function to update the static top line (clock) ===
 def write_time():
@@ -72,54 +82,28 @@ def scroll_line_infinite(chars, row, delay=0.5):
         for col, c in enumerate(slice_chars):
             lcd.cursor_pos = (row, col)
             lcd.write_string(c)
-        write_time()
+        # write_time()
         time.sleep(delay)
 
 # === Main loop ===
 while True:
-    scroll_line_infinite(scroll_chars, row=1, delay=0.5)
-# Convert string to list of characters for scrolling
-scroll_chars = list(scroll_text)
-
-# === Function to update the static top line (clock) ===
-def write_time():
+    # Display remaining time on LCD
+    mins, secs = divmod(remaining_time, 60)
     lcd.cursor_pos = (0, 0)
-    lcd.write_string(time.strftime("%H:%M:%S").ljust(num_cols))
+    lcd.write_string(f"{current_mode.capitalize()}: {mins:02d}:{secs:02d}".ljust(16))
 
-# === Function to scroll a line of characters ===
-def scroll_line(chars, row, delay=0.35):
-    padding = [' '] * num_cols
-    s = padding + chars + padding
-    for i in range(len(s) - num_cols + 1):
-        for col, c in enumerate(s[i:i+num_cols]):
-            lcd.cursor_pos = (row, col)
-            lcd.write_string(c)
-        write_time()  # optional: keep clock updated during scroll
-        time.sleep(delay)
-
-# === Main loop ===
-while True:
-    scroll_line_infinite(scroll_chars, row=1, delay=0.3)
-
-# Convert string to list of characters for scrolling
-scroll_chars = list(scroll_text)
-
-# === Function to update the static top line (clock) ===
-def write_time():
-    lcd.cursor_pos = (0, 0)
-    lcd.write_string(time.strftime("%H:%M:%S").ljust(num_cols))
-
-# === Function to scroll a line of characters ===
-def scroll_line(chars, row, delay=0.35):
-    padding = [' '] * num_cols
-    s = padding + chars + padding
-    for i in range(len(s) - num_cols + 1):
-        for col, c in enumerate(s[i:i+num_cols]):
-            lcd.cursor_pos = (row, col)
-            lcd.write_string(c)
-        write_time()  # optional: keep clock updated during scroll
-        time.sleep(delay)
-
-# === Main loop ===
-while True:
-    scroll_line(scroll_chars, row=1, delay=0.3)
+    # Decrement timer
+    time.sleep(1)
+    remaining_time -= 1
+    if current_mode == "focus":
+        scroll_line_infinite(focus_chars, row=1, delay=0.5)
+    elif current_mode == "break":
+        scroll_line_infinite(break_chars, row=1, delay=0.5)
+    # Switch mode when timer expires
+    if remaining_time <= 0:
+        if current_mode == "focus":
+            current_mode = "break"
+        elif current_mode == "break":
+            current_mode = "focus"
+        # Reset timer for new mode
+        remaining_time = modes[current_mode]["duration"]
