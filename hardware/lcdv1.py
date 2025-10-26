@@ -1,5 +1,6 @@
 from RPLCD.i2c import CharLCD
 import time
+import threading
 
 lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=1, cols=16, rows=2, dotsize=8)
 lcd.clear()
@@ -63,7 +64,7 @@ modes = {
 remaining_time = modes[current_mode]["duration"]
 
 # tracking alert mode
-alert_active = Fals
+alert_active = False
 alert_duration = 36 #secs
 alert_remaining = 0 #remaining secs
 
@@ -84,13 +85,18 @@ def write_time():
 # === Function to scroll a line of characters ===
 def scroll_line_infinite(chars, row, delay=0.5):
     text_length = len(chars)
-    for offset in range(0, 10000):  # large number, effectively infinite
+    offset = 0
+    while True:
         slice_chars = [chars[(i + offset) % text_length] for i in range(num_cols)]
         for col, c in enumerate(slice_chars):
             lcd.cursor_pos = (row, col)
             lcd.write_string(c)
-        # write_time()
+        offset += 1
         time.sleep(delay)
+
+# === Start scrolling in background thread ===
+scroll_thread = threading.Thread(target=scroll_line_infinite, args=(focus_chars, 1, 0.5), daemon=True)
+scroll_thread.start()
 
 # === Main loop ===
 while True:
@@ -102,15 +108,16 @@ while True:
     # Decrement timer
     time.sleep(1)
     remaining_time -= 1
-    if current_mode == "focus":
-        scroll_line_infinite(focus_chars, row=1, delay=0.5)
-    elif current_mode == "break":
-        scroll_line_infinite(break_chars, row=1, delay=0.5)
+    
     # Switch mode when timer expires
     if remaining_time <= 0:
         if current_mode == "focus":
             current_mode = "break"
+            scroll_thread = threading.Thread(target=scroll_line_infinite, args=(break_chars, 1, 0.5), daemon=True)
+            scroll_thread.start()
         elif current_mode == "break":
             current_mode = "focus"
+            scroll_thread = threading.Thread(target=scroll_line_infinite, args=(focus_chars, 1, 0.5), daemon=True)
+            scroll_thread.start()
         # Reset timer for new mode
         remaining_time = modes[current_mode]["duration"]
