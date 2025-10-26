@@ -146,10 +146,37 @@ while True:
     time.sleep(1)
     remaining_time -= 1
 
-    # Simulated stress increase
-    stress = (stress + 1) % 100
-    if stress > 60 and current_mode != "alert":
-        threading.Thread(target=run_alert_mode, daemon=True).start()
+    # detects if stress is above 60 for 5 seconds (for demo purposes)
+    STRESS_URL = "http://10.147.33.199/stress"
+    # Variables to track stress status
+    stress_over_threshold = False
+    stress_high_since = None
+    THRESHOLD = 60
+    HOLD_SECONDS = 5
+  
+    def get_stress_value():
+        """Fetch current stress value from Flask backend"""
+        try:
+            response = requests.get(STRESS_URL, timeout=2)
+            data = response.json()
+            return data.get("stress", 0)
+        except Exception as e:
+            print("Error fetching stress value:", e)
+            return 0
+
+    stress_value = get_stress_value()
+    # Check threshold
+    if stress_value > THRESHOLD:
+        if not stress_over_threshold:
+            # First time exceeding threshold
+            stress_high_since = time.time()
+            stress_over_threshold = True
+        elif time.time() - stress_high_since >= HOLD_SECONDS and current_mode != "alert":
+          threading.Thread(target=run_alert_mode, daemon=True).start()
+    else:
+        # Reset if stress drops
+        stress_over_threshold = False
+        stress_high_since = None
 
     # Switch mode when timer expires
     if remaining_time <= 0 and current_mode != "alert":
