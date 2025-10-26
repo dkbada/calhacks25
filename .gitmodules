@@ -1,0 +1,3 @@
+[submodule "calm-cam-buddy"]
+	path = calm-cam-buddy
+	url = https://github.com/dkbada/calm-cam-buddy.git
