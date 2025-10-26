@@ -57,11 +57,9 @@ num_cols = 16
 
 current_mode = "focus"
 modes = {
-    "focus": {"active": True, "duration": 25},  # 25 minutes
-    "break": {"active": False, "duration": 5},  # 5 minutes
+    "focus": {"active": True, "duration": 25*60},  # 25 minutes
+    "break": {"active": False, "duration": 5*60},  # 5 minutes
 }
-
-remaining_time = modes[current_mode]["duration"]
 
 # tracking alert mode
 alert_active = False
@@ -84,6 +82,7 @@ def write_time():
 
 # === Function to scroll a line of characters ===
 def scroll_line_infinite(chars, row, delay=0.5):
+    remaining_time = modes[current_mode]["duration"]
     text_length = len(chars)
     offset = 0
     while True:
@@ -91,24 +90,19 @@ def scroll_line_infinite(chars, row, delay=0.5):
         for col, c in enumerate(slice_chars):
             lcd.cursor_pos = (row, col)
             lcd.write_string(c)
-        offset += 1
         time.sleep(delay)
-
-# === Start scrolling in background thread ===
-scroll_thread = threading.Thread(target=scroll_line_infinite, args=(focus_chars, 1, 0.5), daemon=True)
-scroll_thread.start()
-
+        # Display remaining time on LCD
+        mins, secs = divmod(remaining_time, 60)
+        lcd.cursor_pos = (0, 0)
+        lcd.write_string(f"{current_mode.capitalize()}: {mins:02d}:{secs:02d}".ljust(16))
+        # Decrement timer
+        remaining_time -= 0.5
 # === Main loop ===
 while True:
-    # Display remaining time on LCD
-    mins, secs = divmod(remaining_time, 60)
-    lcd.cursor_pos = (0, 0)
-    lcd.write_string(f"{current_mode.capitalize()}: {mins:02d}:{secs:02d}".ljust(16))
-
-    # Decrement timer
-    time.sleep(1)
-    remaining_time -= 1
-    
+    if current_mode == "focus":
+        scroll_line_infinite(focus_chars, row=1, delay=0.5)
+    elif current_mode == "break":
+        scroll_line_infinite(break_chars, row=1, delay=0.5)
     # Switch mode when timer expires
     if remaining_time <= 0:
         if current_mode == "focus":
